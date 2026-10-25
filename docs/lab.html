@@ -68,6 +68,26 @@ table.grid{border-collapse:collapse;width:100%;table-layout:fixed}
 .stu .w{color:var(--bad);font-weight:600}.stu .a{color:var(--warn);font-weight:600}
 select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
 .note{color:var(--mut);font-size:12px}
+.status{margin:0 0 12px;padding:10px 14px;border-radius:10px;background:var(--accbg);font-size:15px;line-height:1.5}
+.status.good{background:var(--okbg)}
+.friendly{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+button.big{font-size:16px;padding:10px 22px}
+.friendly label.speed{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--mut)}
+.friendly label.speed input{width:150px}
+.ex-title{margin:16px 0 8px;font-weight:700;font-size:14px}
+.ex-title small{font-weight:400;color:var(--mut)}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets button{border-radius:99px;padding:5px 14px}
+.presets button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.preset-desc{margin:10px 0 0;font-size:14px;color:var(--ink)}
+details.adv{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+details.adv summary{cursor:pointer;color:var(--mut);font-size:14px}
+.advgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 22px;margin-top:12px}
+.advgrid label{display:block;font-size:13px;font-weight:600}
+.advgrid label output{display:inline;color:var(--acc)}
+.advgrid label small{display:block;font-weight:400;color:var(--mut);font-size:12.5px}
+.advgrid label input[type=range]{display:block;width:100%;margin:8px 0 4px}
+.advgrid label input[type=number]{display:block;margin:8px 0 4px}
 .explain{display:none;margin:0 0 10px;padding:8px 10px;border-radius:8px;background:var(--accbg);color:var(--ink);font-size:13px;line-height:1.4}
 body.explaining .explain{display:flex;gap:8px;align-items:flex-start}
 .explain .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
@@ -90,24 +110,33 @@ body.explaining #btnExplain{background:var(--acc);border-color:var(--acc);color:
 
   <main class="right">
     <section class="card" id="card-metrics">
-      <h2>Live status of the timetable on screen</h2>
+      <h2>What is happening right now</h2>
+      <p class="status" id="plainStatus"></p>
       <div class="metrics" id="metrics"></div>
     </section>
 
     <section class="card" id="card-controls">
-      <h2>Genetic algorithm controls</h2>
-      <div class="controls">
-        <button class="pri" id="btnRun">▶ Run</button>
-        <button id="btnStep">Step 1 generation</button>
-        <button id="btnReset">↻ New random start</button>
-        <label>Population <input type="range" id="cPop" min="20" max="120" step="10" value="60"><output id="oPop"></output></label>
-        <label>Mutation per gene <input type="range" id="cMut" min="0.01" max="0.15" step="0.01" value="0.05"><output id="oMut"></output></label>
-        <label>Crossover prob. <input type="range" id="cCx" min="0.5" max="1" step="0.05" value="0.8"><output id="oCx"></output></label>
-        <label>Elites <input type="range" id="cEl" min="0" max="4" step="1" value="2"><output id="oEl"></output></label>
-        <label>Speed (gens/s) <input type="range" id="cSp" min="1" max="60" step="1" value="12"><output id="oSp"></output></label>
-        <label>Stop at generation <input type="range" id="cGen" min="50" max="400" step="10" value="150"><output id="oGen"></output></label>
-        <label>Seed <input type="number" id="cSeed" value="7" style="width:70px"></label>
+      <h2>Controls</h2>
+      <div class="friendly">
+        <button class="pri big" id="btnRun">▶ Solve it</button>
+        <button id="btnStep" title="Advance the search by one round so you can see each change">One step at a time</button>
+        <button id="btnReset" title="Throw the current schedules away and begin again from a new random schedule">↻ Shuffle and start over</button>
+        <label class="speed">Watching speed <span>Slow</span><input type="range" id="cSp" min="1" max="60" step="1" value="12" aria-label="Watching speed"><span>Fast</span></label>
       </div>
+      <div class="ex-title">Try an experiment <small>(each one starts over from a new random schedule)</small></div>
+      <div class="presets" id="presets"></div>
+      <p class="preset-desc" id="presetDesc"></p>
+      <details class="adv">
+        <summary>Advanced settings (for the curious)</summary>
+        <div class="advgrid">
+          <label>Crowd size: <output id="oPop"></output> schedules<input type="range" id="cPop" min="20" max="120" step="10" value="60"><small>How many candidate schedules compete at the same time (the “population”).</small></label>
+          <label>Random change: <output id="oMut"></output><input type="range" id="cMut" min="0.01" max="0.15" step="0.01" value="0.05"><small>Chance that each exam is moved to a random slot in a new schedule (“mutation”).</small></label>
+          <label>Parents mixing: <output id="oCx"></output><input type="range" id="cCx" min="0.5" max="1" step="0.05" value="0.8"><small>How often two good schedules swap parts to make children (“crossover”).</small></label>
+          <label>Protected best schedules: <output id="oEl"></output><input type="range" id="cEl" min="0" max="4" step="1" value="2"><small>How many top schedules are kept untouched each round (“elitism”).</small></label>
+          <label>Stop after: <output id="oGen"></output> rounds<input type="range" id="cGen" min="50" max="400" step="10" value="150"><small>Number of rounds of evolution (“generations”).</small></label>
+          <label>Starting point (seed)<input type="number" id="cSeed" value="7" style="width:90px"><small>The same number always gives the same run, handy for repeating a result.</small></label>
+        </div>
+      </details>
     </section>
 
     <div class="row r2">
@@ -326,16 +355,23 @@ function drawChart() {
   ctx.fillStyle = css("--warn"); ctx.fillText("population mean", w - Rr - 4, T + 32);
 }
 function drawMetrics() {
-  const e = shownEval;
+  const e = shownEval, g = G.gen, mg = cfg().maxGen;
+  let msg, good = false;
+  if (g === 0) msg = `This is a <b>random schedule</b>; nothing has been improved yet. About ${e.clashes} times a student would have two exams at the same moment. Press <b>Solve it</b> and watch the red lines disappear.`;
+  else if (e.clashes > 0) msg = `Round ${g} of ${mg}: still <b>${e.clashes} clash${e.clashes > 1 ? "es" : ""}</b> (a student with two exams at once). The algorithm keeps mixing the best schedules to get rid of them.`;
+  else if (e.rf > 0) msg = `Round ${g} of ${mg}: no clashes, but ${e.rf} exam${e.rf > 1 ? "s have" : " has"} no room big enough. Almost there.`;
+  else if (g < mg) { good = true; msg = `Round ${g} of ${mg}: <b>valid schedule found.</b> No student has two exams at once and every exam has a room. It now keeps polishing: fewer back-to-back exams and crowded days (score ${e.total.toLocaleString()}, lower is better).`; }
+  else { good = true; msg = `<b>Finished after ${mg} rounds.</b> Valid schedule with a score of ${e.total.toLocaleString()}. For comparison, the Python run on the same data scored ${DATA.pythonSeed7}. Lower is better.`; }
+  $("plainStatus").innerHTML = msg; $("plainStatus").className = "status" + (good ? " good" : "");
   $("metrics").innerHTML =
-    `<div class="tile"><b>${G.gen}</b><small>generation</small></div>` +
-    `<div class="tile"><b>${e.total.toLocaleString()}</b><small>penalty (lower = better)</small></div>` +
-    `<div class="badge ${e.hard ? "bad" : "ok"}">${e.hard ? "INVALID: " + e.hard + " hard violation" + (e.hard > 1 ? "s" : "") : "VALID: 0 hard violations"}</div>` +
-    `<div class="tile"><b>${e.clashes}</b><small>student clashes ×${W.clash}</small></div>` +
-    `<div class="tile"><b>${e.rf}</b><small>room failures ×${W.room}</small></div>` +
-    `<div class="tile"><b>${e.consec}</b><small>back-to-back ×${W.consec}</small></div>` +
-    `<div class="tile"><b>${e.load}</b><small>same-day load ×${W.load}</small></div>` +
-    `<div class="tile"><b>${DATA.pythonSeed7}</b><small>Python result, seed 7</small></div>`;
+    `<div class="tile" title="One round of evolution is called a generation"><b>${g}</b><small>round (generation)</small></div>` +
+    `<div class="tile" title="Clashes and missing rooms cost 1000 each; back-to-back exams 10; extra exams on a day 2"><b>${e.total.toLocaleString()}</b><small>score (lower is better)</small></div>` +
+    `<div class="badge ${e.hard ? "bad" : "ok"}">${e.hard ? "Not valid yet: " + e.hard + " rule break" + (e.hard > 1 ? "s" : "") : "Valid: no rules broken"}</div>` +
+    `<div class="tile" title="Counts students affected; each costs 1000 points"><b>${e.clashes}</b><small>clashes (two exams at once)</small></div>` +
+    `<div class="tile" title="Each costs 1000 points"><b>${e.rf}</b><small>exams without a room</small></div>` +
+    `<div class="tile" title="Each costs 10 points"><b>${e.consec}</b><small>back-to-back exams</small></div>` +
+    `<div class="tile" title="Each costs 2 points"><b>${e.load}</b><small>extra exams on one day</small></div>` +
+    `<div class="tile"><b>${DATA.pythonSeed7}</b><small>Python’s result on this data</small></div>`;
 }
 function drawStudent() {
   const ex = STU[selStudent].slice().sort((a, b) => shown[a] - shown[b]), {rooms} = allocate(shown);
@@ -360,13 +396,45 @@ function render() {
   shownEval = evaluate(shown);
   drawMetrics(); drawGraph(); drawGrid(); drawGenes(); drawChart(); drawStudent(); drawBars(); updateTourLive();
   const c = cfg();
-  $("oPop").textContent = c.pop; $("oMut").textContent = c.pm; $("oCx").textContent = c.pc;
-  $("oEl").textContent = c.el; $("oSp").textContent = c.sp; $("oGen").textContent = c.maxGen;
+  $("oPop").textContent = c.pop; $("oMut").textContent = Math.round(c.pm * 100) + "% per exam";
+  $("oCx").textContent = Math.round(c.pc * 100) + "% of the time";
+  $("oEl").textContent = c.el; $("oGen").textContent = c.maxGen;
 }
 
 /* ---------- run loop ---------- */
 let running = false, acc = 0, last = 0;
-function setRunning(v) { running = v; $("btnRun").textContent = v ? "⏸ Pause" : "▶ Run"; last = performance.now(); }
+function setRunning(v) {
+  running = v; last = performance.now();
+  const midway = typeof G === "object" && G && G.gen > 0 && G.gen < cfg().maxGen;
+  $("btnRun").textContent = v ? "⏸ Pause" : (midway ? "▶ Continue" : "▶ Solve it");
+}
+
+/* ---------- one-click experiments ---------- */
+const PRESETS = [
+  {id: "rec", name: "Recommended", set: {pop: 60, mut: 0.05, cx: 0.8, el: 2},
+   desc: "The balanced settings used in the project. It usually finds a clash-free schedule within about 50 rounds (occasionally longer)."},
+  {id: "much", name: "Too much change", set: {pop: 60, mut: 0.15, cx: 0.8, el: 2},
+   desc: "Every new schedule is scrambled so heavily that good parts get destroyed. In our Python tests this setting never produced a valid timetable."},
+  {id: "little", name: "Too little change", set: {pop: 60, mut: 0.01, cx: 0.8, el: 2},
+   desc: "Schedules barely change, so the search explores very little. It is slower and less reliable (in our tests 9 runs in 10 were valid, with worse scores)."},
+  {id: "small", name: "A tiny crowd", set: {pop: 20, mut: 0.05, cx: 0.8, el: 2},
+   desc: "Only 20 schedules compete, so there is little variety to combine. In our tests only 4 runs in 10 reached a valid timetable."},
+  {id: "noel", name: "No safety net", set: {pop: 60, mut: 0.05, cx: 0.8, el: 0},
+   desc: "The best schedule is not protected, so mixing and random changes can destroy it. In our tests the results were clearly worse."}
+];
+let activePreset = "rec";
+function drawPresets() {
+  $("presets").innerHTML = PRESETS.map(p => `<button class="${p.id === activePreset ? "on" : ""}" data-id="${p.id}">${p.name}</button>`).join("");
+  document.querySelectorAll("#presets button").forEach(b => b.onclick = () => applyPreset(b.dataset.id));
+  const p = PRESETS.find(x => x.id === activePreset);
+  $("presetDesc").textContent = p ? p.desc : "Custom settings from the advanced panel. Choose an experiment above to go back to a ready-made one.";
+}
+function applyPreset(id) {
+  const p = PRESETS.find(x => x.id === id); activePreset = id;
+  $("cPop").value = p.set.pop; $("cMut").value = p.set.mut; $("cCx").value = p.set.cx; $("cEl").value = p.set.el;
+  $("cSeed").value = Math.floor(Math.random() * 9000) + 1;
+  drawPresets(); resetGA(); setRunning(true);
+}
 function frame(t) {
   const dt = Math.min(0.1, (t - last) / 1000); last = t;
   if (running) {
@@ -410,7 +478,7 @@ const steps = [
       <li><b>Mutate</b> each gene with prob ${cfg().pm}</li>
       <li><b>Elitism</b>: keep the best ${cfg().el} unchanged</li>
     </ol>
-    <p>Try changing the sliders while it runs, e.g. mutation 0.15 or elites 0.</p>
+    <p>Under <b>Controls</b>, try the experiments such as “Too much change” or “No safety net” and watch the result get worse.</p>
     <p><button class="pri" id="tRun">Run the GA</button></p>`},
   {title: "6 · Result and honest comparison", spot: ["metrics", "grid", "compare"], body: () => `
     <p>Generation <b>${G.gen}</b>: penalty <b>${shownEval.total.toLocaleString()}</b>, ${shownEval.hard ? "still invalid" : "<b style=\"color:var(--ok)\">valid timetable</b>"}.
@@ -425,7 +493,7 @@ let tourIdx = 0;
 const EXPLAIN = {
   tour: "Guided tour: six steps from the problem to the result. Each step outlines the panel it talks about and updates its numbers live.",
   "card-metrics": "Status of the timetable on screen: generation, penalty, a VALID / INVALID badge for the hard rules, the four penalty terms with their weights, and the Python seed-7 result (600) for comparison.",
-  "card-controls": "Run, pause or step the genetic algorithm and restart from a new random population. The sliders change population, mutation, crossover, elites, speed and stopping generation; most take effect while it runs.",
+  "card-controls": "Press Solve it to watch the algorithm work, step through it one round at a time, or shuffle and start over. The experiment buttons show what goes wrong with bad settings; the technical sliders are in Advanced settings.",
   "card-graph": "Exam conflict graph: each dot is an exam (bigger = more students), coloured by its slot. A line means students take both exams; red lines are clashes (linked exams in the same slot).",
   "card-grid": "The timetable of the best schedule so far: days down, periods across. Each chip shows exam, number of students and room. A red cell contains a student clash.",
   "card-genes": "The chromosome: 20 genes, one per exam, each holding that exam's slot number (1 to 15). Colours match the graph and the grid.",
@@ -474,6 +542,8 @@ function init() {
   $("btnReset").onclick = () => { $("cSeed").value = Math.floor(Math.random() * 9000) + 1; resetGA(); };
   $("cPop").onchange = resetGA; $("cSeed").onchange = resetGA;
   for (const id of ["cMut", "cCx", "cEl", "cSp", "cGen"]) $(id).oninput = render;
+  for (const id of ["cPop", "cMut", "cCx", "cEl"]) $(id).addEventListener("input", () => { activePreset = null; drawPresets(); });
+  drawPresets();
   window.addEventListener("resize", render);
   for (const k of Object.keys(EXPLAIN)) if (k !== "tour") $(k).insertAdjacentHTML("afterbegin", explainHtml(k));
   $("btnExplain").onclick = () => { document.body.classList.toggle("explaining"); render(); };
