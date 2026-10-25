@@ -1,0 +1,8 @@
+# generated results (recreate by running the scripts)
+outputs/
+# report, slides and their build files are kept out of this repository
+report/
+# local tooling
+.claude/
+__pycache__/
+*.pyc

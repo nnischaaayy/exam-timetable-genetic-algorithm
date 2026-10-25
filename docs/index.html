@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exam Timetable Optimisation with a Genetic Algorithm</title>
+<meta name="description" content="Scheduling 20 exams into 15 slots and 4 rooms with no student clash, solved by a genetic algorithm. Synthetic data.">
+<style>
+:root{--bg:#f6f8fc;--card:#ffffff;--ink:#1b2230;--mut:#5b6679;--line:#dde3ee;--acc:#2b6cdf;--accbg:#e8f0fd;
+  --ok:#17935a;--okbg:#e3f6ec;--bad:#d03a3a;--badbg:#fde9e9;--gold:#f2a900;--navy:#0f1b3d;--navy2:#1a2b5c;
+  --p0:#dbe8fb;--p0i:#1d4f9e;--p1:#d9f0e3;--p1i:#17673f;--p2:#ffe6c7;--p2i:#8a4b00;--p3:#e8defa;--p3i:#5a2ea3;}
+@media (prefers-color-scheme:dark){:root{--bg:#0e121a;--card:#161c28;--ink:#e8ecf4;--mut:#9aa6bb;--line:#283043;
+  --acc:#6aa2ff;--accbg:#1c2a45;--ok:#3ccf8a;--okbg:#14301f;--bad:#ff7070;--badbg:#3a1b1d;
+  --p0:#1c2f52;--p0i:#a9c8ff;--p1:#16372a;--p1i:#9fe0bd;--p2:#43301a;--p2i:#ffcf94;--p3:#2f2450;--p3i:#cbb4ff;}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--acc)}
+nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;gap:6px;align-items:center;padding:10px 20px;
+  background:rgba(15,27,61,.82);backdrop-filter:blur(8px);color:#fff;font-size:14px;overflow-x:auto;white-space:nowrap}
+nav b{margin-right:auto;font-size:15px}
+nav a{color:#cfd8ee;text-decoration:none;padding:4px 10px;border-radius:99px}
+nav a:hover,nav a.on{background:rgba(255,255,255,.14);color:#fff}
+nav a.cta{background:var(--gold);color:#16224a;font-weight:700}
+.tag{display:inline-block;background:rgba(242,169,0,.18);color:var(--gold);padding:3px 12px;border-radius:99px;font-size:13px;font-weight:700}
+/* hero */
+.hero{min-height:100vh;background:radial-gradient(1200px 700px at 78% 40%,#1d3270 0%,var(--navy) 62%);color:#fff;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:30px;align-items:center;padding:92px 6vw 50px}
+.hero h1{font-family:Cambria,Georgia,serif;font-size:clamp(34px,5vw,60px);line-height:1.05;margin:14px 0 18px}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero p{font-size:18px;color:#d5def2;margin:0 0 14px;max-width:34em}
+.hero .sol{color:#fff}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{display:inline-block;padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.35);color:#fff;text-decoration:none;font-weight:600}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#16224a}
+.btn:hover{filter:brightness(1.1)}
+.vis{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px}
+#heroGraph{width:100%;aspect-ratio:1/1;display:block}
+.hud{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.hud div{flex:1;min-width:92px;background:rgba(255,255,255,.07);border-radius:10px;padding:6px 10px}
+.hud b{display:block;font-size:22px;font-family:Cambria,Georgia,serif;line-height:1.15}
+.hud small{color:#b9c6e4;font-size:12px}
+#hClash.ok{color:#5be3a1}
+.badge{align-self:center;padding:6px 12px;border-radius:99px;font-weight:700;font-size:13px;background:rgba(255,255,255,.1);color:#fff}
+.badge.ok{background:#17935a}
+.cue{margin-top:18px;color:#b9c6e4;font-size:14px}
+.legend{font-size:12.5px;color:#b9c6e4;margin-top:8px}
+@media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:84px}}
+/* sections */
+section.sec{max-width:1120px;margin:0 auto;padding:78px 22px 10px}
+section.sec h2{font-family:Cambria,Georgia,serif;font-size:clamp(28px,3.4vw,40px);line-height:1.15;margin:0 0 8px}
+.kicker{color:var(--acc);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.09em}
+.lead{color:var(--mut);font-size:18px;max-width:46em;margin:0 0 24px}
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:860px){.g3,.g2,.g4{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h3{margin:0 0 6px;font-size:18px}
+.card p{margin:0;color:var(--mut);font-size:15px}
+.num{font-family:Cambria,Georgia,serif;font-size:42px;font-weight:700;line-height:1.1;color:var(--acc)}
+.why{margin-top:18px;background:var(--accbg);border-radius:12px;padding:12px 16px;font-size:15px}
+.why b{color:var(--acc)}
+.big{background:var(--navy);color:#fff;border-radius:16px;padding:26px 28px;display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.big .n{font-family:Cambria,Georgia,serif;font-size:clamp(40px,6vw,64px);color:var(--gold);line-height:1}
+.big p{margin:0;color:#d5def2;max-width:30em}
+button.b{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+button.b:hover{border-color:var(--acc)}
+button.b.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.tiles{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:120px}
+.tile b{display:block;font-size:24px;line-height:1.2;font-family:Cambria,Georgia,serif}
+.tile small{color:var(--mut);font-size:12.5px}
+.tile.ok b{color:var(--ok)}.tile.bad b{color:var(--bad)}
+/* genes */
+.row{display:flex;gap:3px;align-items:center;margin:5px 0;overflow-x:auto;padding-bottom:3px}
+.row .lab{flex:none;width:92px;font-size:12.5px;color:var(--mut);font-weight:600}
+.gene{flex:none;width:30px;height:34px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#111}
+.gene.fa{box-shadow:inset 0 3px 0 #2b6cdf}.gene.fb{box-shadow:inset 0 3px 0 #d98412}.gene.mut{outline:2px solid var(--bad)}
+.slider{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
+input[type=range]{width:240px}
+.steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.step{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.step b{display:block}.step small{color:var(--mut)}
+.formula{font-family:Cambria,Georgia,serif;font-size:clamp(18px,2.4vw,26px);background:var(--navy);color:#fff;border-radius:14px;padding:16px 20px;text-align:center;margin-bottom:16px}
+canvas.ch{width:100%;height:300px;display:block}
+/* calendar */
+.cal{display:grid;grid-template-columns:70px repeat(5,minmax(0,1fr));gap:5px;overflow-x:auto}
+.cal .h{text-align:center;font-weight:700;font-size:13px;background:var(--bg);border-radius:8px;padding:5px}
+.cal .h small{display:block;color:var(--mut);font-weight:400}
+.cal .t{font-size:12px;color:var(--mut);display:flex;align-items:center}
+.cal .c{border:1px dashed var(--line);border-radius:8px;min-height:74px;padding:3px;display:flex;flex-direction:column;gap:3px;min-width:92px}
+.ex{border-radius:6px;padding:3px 6px;font-size:12px;line-height:1.25}.ex b{display:block}
+.pp0{background:var(--p0);color:var(--p0i)}.pp1{background:var(--p1);color:var(--p1i)}
+.pp2{background:var(--p2);color:var(--p2i)}.pp3{background:var(--p3);color:var(--p3i)}
+.bars .b{display:grid;grid-template-columns:200px 1fr 64px;gap:10px;align-items:center;margin:8px 0}
+@media (max-width:640px){.bars .b{grid-template-columns:120px 1fr 52px}}
+.bars .track{background:var(--line);border-radius:6px;height:20px;overflow:hidden}
+.bars .fill{height:100%;background:var(--acc);border-radius:6px;transition:width 1s}
+.bars .b.ga .fill{background:var(--gold)}.bars .b.rs .fill{background:#8b94a5}
+pre{background:#0f1b3d;color:#e5ecff;border-radius:12px;padding:14px 16px;overflow-x:auto;font-size:14px;margin:8px 0}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s,transform .6s}
+.reveal.in{opacity:1;transform:none}
+footer{margin-top:70px;background:var(--navy);color:#cfd8ee;padding:30px 6vw;font-size:14px}
+footer a{color:var(--gold)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+<nav>
+  <b>Exam Timetable GA</b>
+  <a href="#problem">Problem</a><a href="#why-hard">Why hard</a><a href="#idea">The idea</a><a href="#score">Scoring</a>
+  <a href="#learn">Learning</a><a href="#result">Result</a><a href="#compare">Comparison</a><a href="#proof">Proof</a><a href="#run">Run it</a>
+  <a class="cta" href="lab.html">Open the Lab</a>
+</nav>
+
+<header class="hero" id="top">
+  <div>
+    <span class="tag">SOFT COMPUTING PROJECT · SYNTHETIC DATA</span>
+    <h1>20 exams. 15 slots. <em>Zero clashes.</em></h1>
+    <p><b>The problem:</b> every term a university must decide when each exam happens and in which room, so that no student has two exams at once. Trying every timetable would take longer than the age of the universe.</p>
+    <p class="sol"><b>The solution:</b> evolve timetables. A genetic algorithm breeds, mixes and mutates 60 candidate schedules until one breaks no rule. Watch it happen on the right.</p>
+    <div class="btns">
+      <a class="btn gold" href="#problem">Scroll to see how it works ↓</a>
+      <a class="btn" href="lab.html">Play with the GA</a>
+      <a class="btn" href="results.html">See the exam schedule</a>
+    </div>
+    <div class="cue">Nischay Rehal · Amity University Uttar Pradesh</div>
+  </div>
+  <div class="vis">
+    <canvas id="heroGraph"></canvas>
+    <div class="hud">
+      <div><b id="hGen">0</b><small>generation</small></div>
+      <div><b id="hClash">0</b><small>student clashes</small></div>
+      <div><b id="hPen">0</b><small>penalty</small></div>
+      <span class="badge" id="hBadge">searching…</span>
+    </div>
+    <div class="legend">Each dot is an exam, coloured by its time slot. A line joins exams that share students; <span style="color:#ff8c8c;font-weight:700">red lines are clashes</span>. This is the real algorithm running live in your browser, replaying runs with pre-checked random seeds. A GA is a heuristic: in our tests one browser run in twelve stalled one clash short of a valid timetable.</div>
+  </div>
+</header>
+
+<section class="sec reveal" id="problem">
+  <div class="kicker">1 · The problem</div>
+  <h2>Give every exam a slot and a room, without hurting any student</h2>
+  <p class="lead">A university has 20 exams, 150 students (each taking 3 to 5 exams), 15 time slots (5 days × 3 periods) and 4 rooms (30, 60, 90 and 120 seats).</p>
+  <div class="grid g3">
+    <div class="card"><h3>Hard rules: never break</h3><p>① No student has two exams in the same slot.<br>② Room seats cover the exam’s students.<br>③ A room hosts one exam per slot.<br>④ Every exam gets exactly one slot and room.</p></div>
+    <div class="card"><h3>Soft wishes: keep low</h3><p><b>Back-to-back:</b> exams in neighbouring periods of one day.<br><b>Same-day load:</b> extra exams for a student on one day.</p></div>
+    <div class="card"><h3>The catch</h3><p>Two exams may share a slot only if <b>no student takes both</b> and enough rooms are free. Fixing one clash by moving an exam often creates another.</p></div>
+  </div>
+  <div class="why"><b>Why it matters:</b> a single clash means a student physically cannot attend two exams. A timetable must be completely valid, and then as comfortable as possible.</div>
+</section>
+
+<section class="sec reveal" id="why-hard">
+  <div class="kicker">2 · Why it is hard</div>
+  <h2>Too many timetables to try them all</h2>
+  <div class="big">
+    <div class="n">3 × 10<sup>23</sup></div>
+    <p>possible timetables: each of 20 exams can sit in any of 15 slots (15<sup>20</sup>). At a million timetables per second, checking them all would take about 10 billion years.</p>
+  </div>
+  <p class="lead" style="margin-top:22px">Does luck work? Roll random timetables and count the clashes. Each roll is a completely random schedule.</p>
+  <div class="card">
+    <button class="b pri" id="roll1">Roll 1 random timetable</button>
+    <button class="b" id="roll1k">Roll 1,000</button>
+    <button class="b" id="roll20k">Roll 20,000</button>
+    <div class="tiles">
+      <div class="tile bad"><b id="dLast">–</b><small>clashes in the last roll</small></div>
+      <div class="tile"><b id="dBest">–</b><small>fewest clashes in any roll</small></div>
+      <div class="tile"><b id="dN">0</b><small>timetables rolled</small></div>
+    </div>
+    <p class="note" style="color:var(--mut);font-size:14px;margin-bottom:0">A valid timetable needs 0. Random rolls almost never get there: in our Python test, 9,000 random timetables never produced a valid one.</p>
+  </div>
+  <div class="why"><b>Why we need a smarter search:</b> brute force and luck both fail, but the problem has structure, since good partial timetables can be combined. That is exactly what a genetic algorithm exploits.</div>
+</section>
+
+<section class="sec reveal" id="idea">
+  <div class="kicker">3 · The idea</div>
+  <h2>Let timetables evolve</h2>
+  <p class="lead">Nature improves animals by survival of the fittest. We do the same with timetables: a <b>population of 60</b> candidates improves over <b>150 generations</b>.</p>
+  <div class="steps">
+    <div class="step"><b>1 · Score</b><small>penalty for every timetable</small></div>
+    <div class="step"><b>2 · Select</b><small>tournament of 3: best of three random timetables</small></div>
+    <div class="step"><b>3 · Cross over</b><small>child takes the head of one parent, the tail of the other (p = 0.8)</small></div>
+    <div class="step"><b>4 · Mutate</b><small>each gene gets a random slot with p = 0.05</small></div>
+    <div class="step"><b>5 · Keep the best 2</b><small>elitism: progress is never lost</small></div>
+  </div>
+  <div class="card">
+    <h3>Try crossover</h3>
+    <p>A timetable is a list of 20 numbers: gene <i>i</i> is the slot (1 to 15) of exam <i>i</i>. Two parents swap parts at a cut point to make two children.</p>
+    <div class="slider"><label for="cut"><b>Cut point:</b> after gene <span id="cutv">8</span></label><input type="range" id="cut" min="1" max="19" value="8">
+      <button class="b" id="newB">New random parent B</button></div>
+    <div id="cx"></div>
+    <div class="slider"><button class="b pri" id="mut">Mutate child 1 (5% per gene)</button><span id="mutInfo" style="color:var(--mut)"></span></div>
+  </div>
+  <div class="why"><b>Why each part:</b> <b>selection</b> pushes towards good timetables while keeping variety; <b>crossover</b> mixes good partial solutions; <b>mutation</b> adds new ideas; <b>elitism</b> guarantees the best answer is never lost, so the best-so-far curve only goes down. Too much mutation (0.10 or more) wrecked results in our tests.</div>
+</section>
+
+<section class="sec reveal" id="score">
+  <div class="kicker">4 · How a timetable is scored</div>
+  <h2>One number decides what survives</h2>
+  <div class="formula">Penalty = 1000 × clashes + 1000 × room failures + 10 × back-to-back + 2 × load</div>
+  <div class="grid g4">
+    <div class="card"><div class="num" id="sClash">0</div><h3>Student clashes ×1000</h3><p>Pairs of exams in one slot, weighted by the students they share.</p></div>
+    <div class="card"><div class="num" id="sRoom">0</div><h3>Room failures ×1000</h3><p>Exams that cannot get a free room big enough (best-fit allocator).</p></div>
+    <div class="card"><div class="num" id="sCons">0</div><h3>Back-to-back ×10</h3><p>Students with exams in neighbouring periods of one day.</p></div>
+    <div class="card"><div class="num" id="sLoad">0</div><h3>Same-day load ×2</h3><p>Extra exams a student has on one day.</p></div>
+  </div>
+  <p style="color:var(--mut);margin-top:10px">Live numbers for the best timetable of the hero run at the top of this page.</p>
+  <div class="why"><b>Why those weights:</b> the huge weight on hard rules means one clash outweighs any comfort gain, so the GA first finds a valid timetable and only then polishes comfort. A separate validator, written independently with plain loops, re-checks the final answer.</div>
+</section>
+
+<section class="sec reveal" id="learn">
+  <div class="kicker">5 · Watching it learn</div>
+  <h2>From chaos to a valid timetable</h2>
+  <p class="lead">Best-so-far penalty (blue) and the population average (orange) from the live run above, on a log scale.</p>
+  <div class="card"><canvas class="ch" id="chart"></canvas></div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><div class="num">12,390 → 600</div><p>Python run, seed 7: best penalty from the first population to generation 150.</p></div>
+    <div class="card"><div class="num">gen 34</div><p>first timetable with zero hard violations in that run. After that the GA only improves comfort.</p></div>
+    <div class="card"><div class="num">10 / 10</div><p>GA runs (different seeds) that ended with a valid timetable; mean penalty 629 ± 154.</p></div>
+  </div>
+  <div class="why"><b>Why the best curve never rises:</b> elitism copies the two best timetables into every generation. Notice the orange average staying much higher: most children are worse, and that is fine.</div>
+</section>
+
+<section class="sec reveal" id="result">
+  <div class="kicker">6 · The result</div>
+  <h2>A real exam schedule</h2>
+  <p class="lead">The timetable found by the Python run (seed 7), with illustrative subject names and dates on the synthetic data.</p>
+  <div class="card"><div class="cal" id="cal"></div>
+    <div class="tiles">
+      <div class="tile ok"><b>0</b><small>student clashes</small></div><div class="tile ok"><b>0</b><small>room problems</small></div>
+      <div class="tile"><b>45</b><small>back-to-back pairs</small></div><div class="tile"><b>75</b><small>same-day load</small></div>
+      <div class="tile"><b>600</b><small>penalty</small></div></div>
+    <div class="btns"><a class="btn gold" style="color:#16224a" href="results.html">Open the full datesheet and student lookup →</a></div>
+  </div>
+</section>
+
+<section class="sec reveal" id="compare">
+  <div class="kicker">7 · Is it any good?</div>
+  <h2>Far better than luck, competitive with other methods</h2>
+  <p class="lead">Mean final penalty over 10 seeds with about 9,000 evaluations each (lower is better, log scale), measured in Python.</p>
+  <div class="card bars" id="bars"></div>
+  <div class="why"><b>Honest reading:</b> the GA beats random search by a huge margin and beats annealing and hill climbing at this budget, but a simple greedy method is even better, and seeding the GA with it gives the best mean. With four times more evaluations, simulated annealing (475) overtakes the GA (519). The GA is competitive, not magic.</div>
+</section>
+
+<section class="sec reveal" id="proof">
+  <div class="kicker">8 · Proof it is correct</div>
+  <h2>We check the answer independently</h2>
+  <div class="grid g3">
+    <div class="card"><h3>Independent validator</h3><p>Re-checks every hard rule with plain loops over students, without the shortcut the fitness uses. The program stops with an error if any hard rule is broken.</p></div>
+    <div class="card"><h3>10 unit tests</h3><p>Fitness equals validator on 100 random timetables; room allocator never double-books; GA best-so-far never worsens; same seed gives the same result.</p></div>
+    <div class="card"><h3>Reproducible</h3><p>Fixed random seeds for data (7) and runs (0 to 9), plus held-out seeds (100 to 109) that were never used to choose settings.</p></div>
+  </div>
+</section>
+
+<section class="sec reveal" id="run">
+  <div class="kicker">9 · Run it yourself</div>
+  <h2>Python 3.11, NumPy and Matplotlib</h2>
+  <pre>pip install -r requirements.txt
+python main_timetable_ga.py          # about 1 minute: tests, GA, tables and figures
+python experiments.py                # about 3 minutes: comparisons, ablation, sweeps
+python -m unittest discover -s tests -v</pre>
+  <p class="lead">On Windows with the py launcher use <code>py -3.11</code> instead of <code>python</code>.</p>
+  <div class="btns"><a class="btn gold" style="color:#16224a" href="lab.html">Open the GA Lab</a>
+    <a class="btn" style="color:var(--ink);border-color:var(--line)" href="results.html">Exam schedule result</a></div>
+</section>
+
+<footer>
+  <b>Exam Timetable Optimisation Using a Genetic Algorithm</b><br>
+  Nischay Rehal · B.Tech CSE (Data Science), Amity University Uttar Pradesh · Soft Computing<br>
+  All data is synthetic, generated with a fixed random seed. Subject names, dates and times are illustrative labels.
+</footer>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+const N = DATA.nExams, S = DATA.nSlots, P = DATA.nPeriods, D = DATA.nDays, CAPS = DATA.roomCaps, SIZES = DATA.sizes, STU = DATA.students, W = DATA.weights;
+const $ = id => document.getElementById(id);
+const C = Array.from({length: N}, () => new Array(N).fill(0));
+for (const ex of STU) for (let a = 0; a < ex.length; a++) for (let b = a + 1; b < ex.length; b++) { C[ex[a]][ex[b]]++; C[ex[b]][ex[a]]++; }
+const hue = s => `hsl(${Math.round(s * 360 / S)} 68% 66%)`;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---- scoring (same definitions as the Python project) ---- */
+function allocFails(ch) {
+  let fails = 0;
+  for (let s = 0; s < S; s++) {
+    const ex = []; for (let e = 0; e < N; e++) if (ch[e] === s) ex.push(e);
+    ex.sort((a, b) => SIZES[b] - SIZES[a]);
+    const free = CAPS.map((_, i) => i);
+    for (const e of ex) { const k = free.findIndex(r => CAPS[r] >= SIZES[e]); if (k < 0) fails++; else free.splice(k, 1); }
+  }
+  return fails;
+}
+function clashesOf(ch) { let c = 0; for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) if (ch[i] === ch[j]) c += C[i][j]; return c; }
+function evaluate(ch) {
+  let consec = 0;
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+    if (!C[i][j] || ch[i] === ch[j]) continue;
+    if (Math.floor(ch[i] / P) === Math.floor(ch[j] / P) && Math.abs(ch[i] % P - ch[j] % P) === 1) consec += C[i][j];
+  }
+  let load = 0;
+  for (const ex of STU) { const cnt = new Array(D).fill(0); for (const e of ex) cnt[Math.floor(ch[e] / P)]++; for (const c of cnt) load += Math.max(0, c - 1); }
+  const clashes = clashesOf(ch), rf = allocFails(ch);
+  return {clashes, rf, consec, load, hard: clashes + rf, total: W.clash * clashes + W.room * rf + W.consec * consec + W.load * load};
+}
+
+/* ---- GA (same algorithm as the lab) ---- */
+function createGA(seed, popSize = 60) {
+  const rng = mulberry32(seed);
+  let pop = Array.from({length: popSize}, () => Array.from({length: N}, () => Math.floor(rng() * S)));
+  let fit = pop.map(c => evaluate(c).total);
+  const g = {gen: 0, first: pop[0].slice(), hb: [], hm: [], firstValid: null, bestC: null, bestF: Infinity};
+  const mean = () => fit.reduce((a, b) => a + b, 0) / fit.length;
+  const upd = () => { const m = Math.min(...fit); if (m < g.bestF) { g.bestF = m; g.bestC = pop[fit.indexOf(m)].slice(); } };
+  upd(); g.hb.push(g.bestF); g.hm.push(mean());
+  if (evaluate(g.bestC).hard === 0) g.firstValid = 0;
+  const tour = () => { let b = -1; for (let k = 0; k < 3; k++) { const i = Math.floor(rng() * popSize); if (b < 0 || fit[i] < fit[b]) b = i; } return pop[b]; };
+  g.step = () => {
+    const order = fit.map((_, i) => i).sort((a, b) => fit[a] - fit[b]);
+    const np = [pop[order[0]].slice(), pop[order[1]].slice()], nf = [fit[order[0]], fit[order[1]]];
+    while (np.length < popSize) {
+      const p1 = tour(), p2 = tour(); let c1 = p1.slice(), c2 = p2.slice();
+      if (rng() < 0.8) { const cut = 1 + Math.floor(rng() * (N - 1)); c1 = p1.slice(0, cut).concat(p2.slice(cut)); c2 = p2.slice(0, cut).concat(p1.slice(cut)); }
+      for (const ch of [c1, c2]) { for (let k = 0; k < N; k++) if (rng() < 0.05) ch[k] = Math.floor(rng() * S); np.push(ch); nf.push(evaluate(ch).total); }
+    }
+    pop = np.slice(0, popSize); fit = nf.slice(0, popSize); g.gen++; upd();
+    g.hb.push(g.bestF); g.hm.push(mean());
+    if (g.firstValid === null && evaluate(g.bestC).hard === 0) g.firstValid = g.gen;
+  };
+  return g;
+}
+
+/* ---- drawing ---- */
+function setup(cv) { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d);
+  const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); return {ctx, w: r.width, h: r.height}; }
+function drawGraph(cv, ch) {
+  const {ctx, w, h} = setup(cv); ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 34;
+  const pos = Array.from({length: N}, (_, i) => { const a = -Math.PI / 2 + 2 * Math.PI * i / N; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+  const bad = [];
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+    const c = C[i][j]; if (!c) continue;
+    if (ch[i] === ch[j]) { bad.push([i, j, c]); continue; }
+    ctx.strokeStyle = "#9db8ff"; ctx.globalAlpha = Math.min(0.42, 0.04 + c * 0.028); ctx.lineWidth = 0.6 + c * 0.1;
+    ctx.beginPath(); ctx.moveTo(...pos[i]); ctx.lineTo(...pos[j]); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  for (const [i, j, c] of bad) { ctx.strokeStyle = "#ff5c5c"; ctx.lineWidth = 2.5 + c * 0.25; ctx.beginPath(); ctx.moveTo(...pos[i]); ctx.lineTo(...pos[j]); ctx.stroke(); }
+  ctx.font = "700 11px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let i = 0; i < N; i++) {
+    const rad = 7 + SIZES[i] / 5;
+    ctx.beginPath(); ctx.arc(pos[i][0], pos[i][1], rad, 0, 7); ctx.fillStyle = hue(ch[i]); ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.stroke(); ctx.fillStyle = "#111"; ctx.fillText(String(i + 1), pos[i][0], pos[i][1] + .5);
+  }
+}
+function drawChart(cv, g) {
+  const {ctx, w, h} = setup(cv); ctx.clearRect(0, 0, w, h);
+  const L = 50, Rr = 12, T = 12, B = 30, pw = w - L - Rr, ph = h - T - B, mg = Math.max(150, g.gen);
+  const all = g.hb.concat(g.hm), y0 = Math.floor(Math.log10(Math.max(1, Math.min(...all)))), y1 = Math.max(y0 + 1, Math.ceil(Math.log10(Math.max(...all))));
+  const X = k => L + pw * k / mg, Y = v => T + ph * (1 - (Math.log10(Math.max(1, v)) - y0) / (y1 - y0));
+  ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--mut"); ctx.font = "12px system-ui"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let k = y0; k <= y1; k++) { const y = Y(Math.pow(10, k)); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - Rr, y); ctx.stroke(); ctx.fillText("10^" + k, L - 6, y); }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (let k = 0; k <= mg; k += 50) ctx.fillText(k, X(k), h - B + 6); ctx.fillText("generation", L + pw / 2, h - 15);
+  const line = (a, col, dash) => { ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.setLineDash(dash); ctx.beginPath(); a.forEach((v, k) => k ? ctx.lineTo(X(k), Y(v)) : ctx.moveTo(X(k), Y(v))); ctx.stroke(); ctx.setLineDash([]); };
+  line(g.hm, "#f0a94a", [5, 4]); line(g.hb, css("--acc"), []);
+  if (g.firstValid !== null) { ctx.strokeStyle = css("--ok"); ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(g.firstValid), T); ctx.lineTo(X(g.firstValid), T + ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = css("--ok"); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("first valid timetable: gen " + g.firstValid, X(g.firstValid) + 5, T + 3); }
+}
+
+/* ---- hero loop ---- */
+const HERO_SEEDS = [8, 2, 6, 0, 4, 11, 3, 10, 1, 9];   // seeds checked to reach a valid timetable within 150 generations
+let seedIdx = 0, G = createGA(HERO_SEEDS[0]), hold = 0;
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (reduce) { while (G.gen < 150 && !(G.firstValid !== null && G.gen >= G.firstValid + 20)) G.step(); }
+const vis = {top: true, score: false, learn: false};
+function heroRender() {
+  const ch = G.gen === 0 ? G.first : G.bestC, e = evaluate(ch);
+  if (vis.top) {
+    drawGraph($("heroGraph"), ch);
+    $("hGen").textContent = G.gen; $("hClash").textContent = e.clashes; $("hClash").className = e.clashes === 0 ? "ok" : "";
+    $("hPen").textContent = e.total.toLocaleString();
+    const ok = e.hard === 0; $("hBadge").textContent = ok ? "valid timetable" : "searching…"; $("hBadge").className = "badge" + (ok ? " ok" : "");
+  }
+  if (vis.score) { $("sClash").textContent = e.clashes; $("sRoom").textContent = e.rf; $("sCons").textContent = e.consec; $("sLoad").textContent = e.load; }
+  if (vis.learn) drawChart($("chart"), G);
+}
+let acc = 0, last = performance.now();
+function frame(t) {
+  const dt = Math.min(0.1, (t - last) / 1000); last = t;
+  if (!reduce) {
+    const done = (G.firstValid !== null && G.gen >= G.firstValid + 20) || G.gen >= 150;
+    if (!done) { acc += dt * 22; let n = 0; while (acc >= 1 && n++ < 6) { G.step(); acc--; } }
+    else { hold += dt; if (hold > 4) { hold = 0; seedIdx = (seedIdx + 1) % HERO_SEEDS.length; G = createGA(HERO_SEEDS[seedIdx]); } }
+  }
+  heroRender();
+  requestAnimationFrame(frame);
+}
+for (const k of ["top", "score", "learn"]) new IntersectionObserver(es => { vis[k] = es[0].isIntersecting; }, {threshold: 0}).observe($(k));
+heroRender(); requestAnimationFrame(frame);
+window.addEventListener("resize", heroRender);
+
+/* ---- dice widget ---- */
+let rolled = 0, bestClash = Infinity;
+const rnd = () => Array.from({length: N}, () => Math.floor(Math.random() * S));
+function roll(n) {
+  let last = 0;
+  for (let k = 0; k < n; k++) { const c = clashesOf(rnd()); last = c; rolled++; if (c < bestClash) bestClash = c; }
+  $("dLast").textContent = last; $("dBest").textContent = bestClash; $("dN").textContent = rolled.toLocaleString();
+}
+$("roll1").onclick = () => roll(1); $("roll1k").onclick = () => roll(1000); $("roll20k").onclick = () => roll(20000);
+
+/* ---- crossover / mutation demo ---- */
+const parentA = DATA.result.slots.slice(); let parentB = (() => { const r = mulberry32(3); return Array.from({length: N}, () => Math.floor(r() * S)); })();
+let child1 = [], mutated = new Set();
+const geneRow = (label, arr, cls, cut, mut) => `<div class="row"><span class="lab">${label}</span>` +
+  arr.map((v, i) => `<span class="gene ${cls ? (typeof cls === "function" ? cls(i) : cls) : ""} ${mut && mut.has(i) ? "mut" : ""}" style="background:${hue(v)}">${v + 1}</span>`).join("") + `</div>`;
+function drawCx() {
+  const cut = +$("cut").value; $("cutv").textContent = cut;
+  child1 = parentA.slice(0, cut).concat(parentB.slice(cut)); const child2 = parentB.slice(0, cut).concat(parentA.slice(cut));
+  mutated = new Set();
+  $("cx").innerHTML = geneRow("Parent A", parentA, "fa") + geneRow("Parent B", parentB, "fb") +
+    geneRow("Child 1", child1, i => i < cut ? "fa" : "fb") + geneRow("Child 2", child2, i => i < cut ? "fb" : "fa");
+  $("mutInfo").textContent = "";
+}
+$("cut").oninput = drawCx; $("newB").onclick = () => { parentB = rnd(); drawCx(); };
+$("mut").onclick = () => {
+  const cut = +$("cut").value; const out = child1.slice(); mutated = new Set();
+  for (let i = 0; i < N; i++) if (Math.random() < 0.05) { out[i] = Math.floor(Math.random() * S); mutated.add(i); }
+  const base = $("cx").querySelectorAll(".row");
+  base[2].outerHTML = geneRow("Child 1 (mutated)", out, i => i < cut ? "fa" : "fb", cut, mutated);
+  $("mutInfo").textContent = mutated.size ? `${mutated.size} gene(s) changed (outlined in red)` : "no gene changed this time; try again (expected: about 1)";
+};
+drawCx();
+
+/* ---- result preview ---- */
+const SUBJ = ["Data Structures","Operating Systems","Database Systems","Computer Networks","Soft Computing","Signals and Systems","Digital Electronics","Analog Circuits","Microprocessors","Communication Systems","Thermodynamics","Fluid Mechanics","Machine Design","Manufacturing Processes","Heat Transfer","Structural Analysis","Geotechnical Engineering","Surveying","Concrete Technology","Hydrology"];
+const TIMES = ["09:00", "11:45", "14:30"], DAYS = ["Mon 7 Dec", "Tue 8 Dec", "Wed 9 Dec", "Thu 10 Dec", "Fri 11 Dec"], SL = DATA.result.slots, RM = DATA.result.rooms;
+(() => {
+  let h = `<div></div>` + DAYS.map(d => `<div class="h">${d.split(" ")[0]}<small>${d.split(" ").slice(1).join(" ")}</small></div>`).join("");
+  for (let p = 0; p < P; p++) { h += `<div class="t">${TIMES[p]}</div>`;
+    for (let d = 0; d < D; d++) { const ex = []; for (let e = 0; e < N; e++) if (Math.floor(SL[e] / P) === d && SL[e] % P === p) ex.push(e);
+      h += `<div class="c">` + ex.map(e => `<div class="ex pp${Math.floor(e / 5)}"><b>${SUBJ[e]}</b>${SIZES[e]} students · ${CAPS[RM[e]]} seats</div>`).join("") + `</div>`; } }
+  $("cal").innerHTML = h;
+})();
+
+/* ---- comparison bars ---- */
+(() => {
+  const items = Object.entries(DATA.ref).sort((a, b) => b[1] - a[1]);
+  const pct = v => Math.max(5, Math.min(100, (Math.log10(v) - 2) / 2 * 100));
+  $("bars").innerHTML = items.map(([k, v]) => `<div class="b ${k.startsWith("GA (Python") ? "ga" : k === "Random search" ? "rs" : ""}"><span>${k.replace("GA (Python)", "Genetic algorithm")}</span>` +
+    `<div class="track"><div class="fill" data-w="${pct(v)}" style="width:0"></div></div><b>${v.toLocaleString()}</b></div>`).join("");
+})();
+
+/* ---- reveal on scroll, active nav link ---- */
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in");
+  e.target.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%");
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); } }), {threshold: 0.12});
+document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+</script>
+</body>
+</html>

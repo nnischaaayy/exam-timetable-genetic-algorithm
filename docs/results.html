@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exam Schedule Result</title>
+<style>
+:root{--bg:#f4f6fb;--card:#ffffff;--ink:#1b2230;--mut:#5b6679;--line:#dde3ee;--acc:#2b6cdf;--accbg:#e8f0fd;
+  --ok:#17935a;--okbg:#e3f6ec;--bad:#d03a3a;--badbg:#fde9e9;--warn:#b86e00;--warnbg:#fff1dc;
+  --p0:#dbe8fb;--p0i:#1d4f9e;--p1:#d9f0e3;--p1i:#17673f;--p2:#ffe6c7;--p2i:#8a4b00;--p3:#e8defa;--p3i:#5a2ea3;}
+@media (prefers-color-scheme:dark){:root{--bg:#0f131b;--card:#171d29;--ink:#e8ecf4;--mut:#9aa6bb;--line:#283043;
+  --acc:#6aa2ff;--accbg:#1c2a45;--ok:#3ccf8a;--okbg:#14301f;--bad:#ff7070;--badbg:#3a1b1d;--warn:#f0a94a;--warnbg:#3a2a12;
+  --p0:#1c2f52;--p0i:#a9c8ff;--p1:#16372a;--p1i:#9fe0bd;--p2:#43301a;--p2i:#ffcf94;--p3:#2f2450;--p3i:#cbb4ff;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+header h1{font-size:18px;margin:0}
+header span{color:var(--mut);font-size:12.5px}
+.tag{background:var(--warnbg);color:var(--warn);padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+a.btn,button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer;text-decoration:none}
+a.btn:hover,button:hover{border-color:var(--acc)}
+.right{margin-left:auto;display:flex;gap:8px}
+main{max-width:1240px;margin:0 auto;padding:16px 20px;display:grid;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:110px}
+.tile b{display:block;font-size:22px;line-height:1.2}
+.tile small{color:var(--mut);font-size:12px}
+.tile.ok{background:var(--okbg);border-color:transparent}.tile.ok b{color:var(--ok)}
+.note{color:var(--mut);font-size:12.5px}
+/* calendar */
+.cal{display:grid;grid-template-columns:110px repeat(5,minmax(0,1fr));gap:6px}
+.cal .h{font-weight:600;text-align:center;padding:6px 4px;background:var(--bg);border-radius:8px;font-size:13px}
+.cal .h small{display:block;color:var(--mut);font-weight:400}
+.cal .t{font-size:12px;color:var(--mut);display:flex;flex-direction:column;justify-content:center;padding:4px 6px}
+.cal .t b{color:var(--ink);font-size:13px}
+.cal .c{border:1px dashed var(--line);border-radius:8px;min-height:92px;padding:4px;display:flex;flex-direction:column;gap:4px}
+.ex{border-radius:7px;padding:5px 7px;font-size:12.5px;line-height:1.3}
+.ex b{display:block;font-size:13px}
+.ex small{display:block;opacity:.85}
+.p0{background:var(--p0);color:var(--p0i)}.p1{background:var(--p1);color:var(--p1i)}
+.p2{background:var(--p2);color:var(--p2i)}.p3{background:var(--p3);color:var(--p3i)}
+.ex.mine{outline:2px solid var(--ink)}
+.dim{opacity:.25}
+/* table */
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.chip{border-radius:99px;padding:3px 12px}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+input[type=search],select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+table.ds{border-collapse:collapse;width:100%}
+.ds th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);padding:8px;border-bottom:2px solid var(--line)}
+.ds td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.ds tr:hover td{background:var(--bg)}
+.pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600}
+.bar{height:8px;background:var(--line);border-radius:4px;min-width:70px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+.two{display:grid;grid-template-columns:1fr;gap:16px}
+#stuCard{order:-1}
+@media (max-width:980px){.cal{grid-template-columns:70px repeat(5,minmax(110px,1fr));overflow-x:auto}}
+.stu li{margin:4px 0}.w{color:var(--bad);font-weight:600}.a{color:var(--warn);font-weight:600}.g{color:var(--ok);font-weight:600}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+@media print{header .right,.tools,#stuCard,.noprint{display:none!important}body{background:#fff}.card{border:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Exam Schedule Result</h1>
+  <span class="tag">SYNTHETIC data · illustrative subject names and dates</span>
+  <span>Timetable found by the genetic algorithm (Python run, seed 7)</span>
+  <div class="right"><a class="btn" href="index.html">Overview</a><a class="btn" href="lab.html">GA Lab</a><button id="btnPrint">Print datesheet</button></div>
+</header>
+<main>
+  <section class="card">
+    <h2>Summary, verified in this page</h2>
+    <div class="stats" id="stats"></div>
+    <p class="note" id="statsNote"></p>
+  </section>
+
+  <section class="card">
+    <h2>Weekly exam calendar</h2>
+    <div class="cal" id="cal"></div>
+    <div class="legend" id="legend"></div>
+    <p class="note">Each card shows the subject, how many students sit it, and its room. Choose a student below to outline their exams here.</p>
+  </section>
+
+  <div class="two">
+    <section class="card">
+      <h2>Full datesheet</h2>
+      <div class="tools" id="tools"></div>
+      <div style="overflow-x:auto"><table class="ds" id="ds"></table></div>
+    </section>
+    <section class="card" id="stuCard">
+      <h2>Check one student’s schedule</h2>
+      <label>Student <select id="selStu"></select></label>
+      <div class="stu" id="stuInfo"></div>
+    </section>
+  </div>
+</main>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+const N = DATA.nExams, P = DATA.nPeriods, CAPS = DATA.roomCaps, SIZES = DATA.sizes, STU = DATA.students;
+const SLOT = DATA.result.slots, ROOM = DATA.result.rooms;
+const PROG = ["B.Tech CSE", "B.Tech ECE", "B.Tech Mechanical", "B.Tech Civil"];
+const SUBJ = [  // [code, subject]; exam i belongs to programme floor(i / 5)
+  ["CS201", "Data Structures"], ["CS202", "Operating Systems"], ["CS203", "Database Systems"],
+  ["CS204", "Computer Networks"], ["CS205", "Soft Computing"],
+  ["EC201", "Signals and Systems"], ["EC202", "Digital Electronics"], ["EC203", "Analog Circuits"],
+  ["EC204", "Microprocessors"], ["EC205", "Communication Systems"],
+  ["ME201", "Thermodynamics"], ["ME202", "Fluid Mechanics"], ["ME203", "Machine Design"],
+  ["ME204", "Manufacturing Processes"], ["ME205", "Heat Transfer"],
+  ["CE201", "Structural Analysis"], ["CE202", "Geotechnical Engineering"], ["CE203", "Surveying"],
+  ["CE204", "Concrete Technology"], ["CE205", "Hydrology"]];
+const ROOMNAME = {30: "Seminar Room S-30", 60: "Hall B-60", 90: "Hall A-90", 120: "Auditorium-120"};
+const TIMES = ["09:00 – 11:00", "11:45 – 13:45", "14:30 – 16:30"];
+const WEEK0 = Date.UTC(2026, 11, 7);   // Monday 7 December 2026 (illustrative)
+const prog = e => Math.floor(e / 5), day = e => Math.floor(SLOT[e] / P), per = e => SLOT[e] % P;
+const dateOf = d => new Date(WEEK0 + d * 86400000);
+const fmt = (d, o) => d.toLocaleDateString("en-GB", Object.assign({timeZone: "UTC"}, o));
+const $ = id => document.getElementById(id);
+
+/* ---- live validation of the schedule (plain loops) ---- */
+function validate() {
+  let clash = 0, consec = 0, load = 0;
+  for (const ex of STU) {
+    const perDay = new Array(DATA.nDays).fill(0);
+    for (let a = 0; a < ex.length; a++) {
+      perDay[day(ex[a])]++;
+      for (let b = a + 1; b < ex.length; b++) {
+        if (SLOT[ex[a]] === SLOT[ex[b]]) clash++;
+        else if (day(ex[a]) === day(ex[b]) && Math.abs(per(ex[a]) - per(ex[b])) === 1) consec++;
+      }
+    }
+    for (const c of perDay) load += Math.max(0, c - 1);
+  }
+  const seen = new Set(); let roomConf = 0, cap = 0;
+  for (let e = 0; e < N; e++) {
+    if (ROOM[e] < 0) continue;
+    const k = SLOT[e] + ":" + ROOM[e]; if (seen.has(k)) roomConf++; seen.add(k);
+    if (CAPS[ROOM[e]] < SIZES[e]) cap++;
+  }
+  const unplaced = ROOM.filter(r => r < 0).length;
+  return {clash, roomConf, cap, unplaced, consec, load, hard: clash + roomConf + cap + unplaced};
+}
+const V = validate();
+
+/* ---- summary ---- */
+const sample = DATA.students.length;
+$("stats").innerHTML =
+  `<div class="tile ok"><b>${V.hard === 0 ? "Valid" : "INVALID"}</b><small>${V.hard} hard violations</small></div>` +
+  `<div class="tile"><b>${N}</b><small>exams</small></div><div class="tile"><b>${sample}</b><small>students</small></div>` +
+  `<div class="tile"><b>${DATA.nDays}</b><small>exam days (${fmt(dateOf(0), {day: "numeric", month: "short"})} – ${fmt(dateOf(4), {day: "numeric", month: "short", year: "numeric"})})</small></div>` +
+  `<div class="tile ok"><b>${V.clash}</b><small>student clashes</small></div>` +
+  `<div class="tile ok"><b>${V.roomConf + V.cap + V.unplaced}</b><small>room problems</small></div>` +
+  `<div class="tile"><b>${V.consec}</b><small>back-to-back pairs</small></div>` +
+  `<div class="tile"><b>${V.load}</b><small>same-day load</small></div>` +
+  `<div class="tile"><b>${DATA.result.penalty}</b><small>GA penalty (lower is better)</small></div>`;
+$("statsNote").textContent = "These counts are recomputed here from the schedule below, with plain loops over students. " +
+  "Subject names, dates and times are illustrative labels on the synthetic dataset.";
+
+/* ---- calendar ---- */
+let selStudent = -1;
+function drawCal() {
+  const mine = selStudent >= 0 ? new Set(STU[selStudent]) : null;
+  let h = `<div></div>` + Array.from({length: DATA.nDays}, (_, d) =>
+    `<div class="h">${fmt(dateOf(d), {weekday: "short"})}<small>${fmt(dateOf(d), {day: "numeric", month: "short"})}</small></div>`).join("");
+  for (let p = 0; p < P; p++) {
+    h += `<div class="t"><b>Session ${p + 1}</b>${TIMES[p]}</div>`;
+    for (let d = 0; d < DATA.nDays; d++) {
+      const ex = []; for (let e = 0; e < N; e++) if (day(e) === d && per(e) === p) ex.push(e);
+      h += `<div class="c">` + ex.map(e => {
+        const isMine = mine && mine.has(e);
+        return `<div class="ex p${prog(e)} ${isMine ? "mine" : ""} ${mine && !isMine ? "dim" : ""}"><b>${SUBJ[e][1]}</b>` +
+          `<small>${SUBJ[e][0]} · ${SIZES[e]} students</small><small>${ROOMNAME[CAPS[ROOM[e]]]}</small></div>`;
+      }).join("") + `</div>`;
+    }
+  }
+  $("cal").innerHTML = h;
+}
+$("legend").innerHTML = PROG.map((n, i) => `<span class="ex p${i}" style="padding:2px 10px">${n}</span>`).join("");
+
+/* ---- datesheet ---- */
+let filt = -1, query = "";
+function drawTools() {
+  $("tools").innerHTML = ["All programmes"].concat(PROG).map((n, i) =>
+    `<button class="chip ${filt === i - 1 ? "on" : ""}" data-f="${i - 1}">${n}</button>`).join("") +
+    `<input type="search" id="q" placeholder="Search subject or code" value="${query}">`;
+  document.querySelectorAll(".chip").forEach(b => b.onclick = () => { filt = +b.dataset.f; drawTools(); drawTable(); });
+  $("q").oninput = e => { query = e.target.value; drawTable(); };
+}
+function drawTable() {
+  const rows = [...Array(N).keys()].sort((a, b) => SLOT[a] - SLOT[b] || SUBJ[a][0].localeCompare(SUBJ[b][0]))
+    .filter(e => (filt < 0 || prog(e) === filt) &&
+      (SUBJ[e][0] + " " + SUBJ[e][1]).toLowerCase().includes(query.toLowerCase()));
+  $("ds").innerHTML = `<tr><th>Date</th><th>Time</th><th>Code</th><th>Subject</th><th>Programme</th><th>Students</th><th>Room</th><th>Seats used</th></tr>` +
+    rows.map(e => `<tr><td><b>${fmt(dateOf(day(e)), {weekday: "short", day: "numeric", month: "short"})}</b></td>` +
+      `<td>${TIMES[per(e)]}</td><td>${SUBJ[e][0]}</td><td><b>${SUBJ[e][1]}</b></td>` +
+      `<td><span class="pill p${prog(e)}">${PROG[prog(e)]}</span></td><td>${SIZES[e]}</td>` +
+      `<td>${ROOMNAME[CAPS[ROOM[e]]]} (${CAPS[ROOM[e]]})</td>` +
+      `<td><div class="bar" title="${SIZES[e]} of ${CAPS[ROOM[e]]} seats"><i style="width:${Math.round(100 * SIZES[e] / CAPS[ROOM[e]])}%"></i></div></td></tr>`).join("") +
+    (rows.length ? "" : `<tr><td colspan="8" class="note">No exams match.</td></tr>`);
+}
+
+/* ---- student view ---- */
+function drawStudent() {
+  if (selStudent < 0) {
+    $("stuInfo").innerHTML = `<p class="note">Choose a student to see their personal datesheet. It highlights two exams at the same time (none) and back-to-back exams.</p>`;
+    return;
+  }
+  const ex = STU[selStudent].slice().sort((a, b) => SLOT[a] - SLOT[b]);
+  let nearCount = 0, sameCount = 0;
+  const li = ex.map(e => {
+    const same = ex.some(o => o !== e && SLOT[o] === SLOT[e]);
+    const near = !same && ex.some(o => o !== e && day(o) === day(e) && Math.abs(per(o) - per(e)) === 1);
+    if (same) sameCount++; if (near) nearCount++;
+    return `<li><b>${fmt(dateOf(day(e)), {weekday: "short", day: "numeric", month: "short"})}</b>, ${TIMES[per(e)]}<br>` +
+      `${SUBJ[e][1]} <span class="note">(${SUBJ[e][0]}, ${ROOMNAME[CAPS[ROOM[e]]]})</span>` +
+      (same ? ` <span class="w">clash!</span>` : near ? ` <span class="a">back-to-back</span>` : "") + `</li>`;
+  }).join("");
+  $("stuInfo").innerHTML = `<p class="${sameCount ? "w" : "g"}">${ex.length} exams · ${sameCount ? sameCount + " clashes" : "no clashes"}` +
+    `${nearCount ? " · " + nearCount + " back-to-back" : ""}</p><ul>${li}</ul>`;
+}
+
+$("selStu").innerHTML = `<option value="-1">Select a student…</option>` +
+  STU.map((_, i) => `<option value="${i}">Student ${i + 1}</option>`).join("");
+$("selStu").onchange = e => { selStudent = +e.target.value; drawCal(); drawStudent(); };
+$("btnPrint").onclick = () => window.print();
+drawCal(); drawTools(); drawTable(); drawStudent();
+</script>
+</body>
+</html>

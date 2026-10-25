@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exam Timetable GA Lab</title>
+<style>
+:root{--bg:#f4f6fb;--card:#ffffff;--ink:#1b2230;--mut:#5b6679;--line:#dde3ee;--acc:#2b6cdf;--accbg:#e8f0fd;
+  --ok:#17935a;--okbg:#e3f6ec;--bad:#d03a3a;--badbg:#fde9e9;--warn:#d98412;--warnbg:#fff1dc;}
+@media (prefers-color-scheme:dark){:root{--bg:#0f131b;--card:#171d29;--ink:#e8ecf4;--mut:#9aa6bb;--line:#283043;
+  --acc:#6aa2ff;--accbg:#1c2a45;--ok:#3ccf8a;--okbg:#14301f;--bad:#ff7070;--badbg:#3a1b1d;--warn:#f0a94a;--warnbg:#3a2a12;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+header h1{font-size:18px;margin:0}
+header span{color:var(--mut);font-size:12.5px}
+.tag{background:var(--warnbg);color:var(--warn);padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px 20px;max-width:1500px;margin:0 auto}
+@media (max-width:980px){.app{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.spot{outline:3px solid var(--acc);outline-offset:2px;transition:outline .2s}
+.tour{position:sticky;top:12px;align-self:start}
+.tour .dots{display:flex;gap:6px;margin-bottom:10px}
+.tour .dot{flex:1;height:6px;border-radius:4px;background:var(--line);cursor:pointer}
+.tour .dot.on{background:var(--acc)}
+.tour h3{margin:2px 0 6px;font-size:17px}
+.tour p{margin:6px 0}
+.tour .nav{display:flex;gap:8px;margin-top:12px}
+.formula{font-family:ui-monospace,Consolas,monospace;background:var(--accbg);padding:8px 10px;border-radius:8px;font-size:12.5px;margin:8px 0}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.right{display:grid;gap:16px;min-width:0}
+.row{display:grid;gap:16px}
+.r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:1200px){.r2{grid-template-columns:1fr}}
+.metrics{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:92px}
+.tile b{display:block;font-size:20px;line-height:1.2}
+.tile small{color:var(--mut);font-size:11.5px}
+.badge{padding:8px 14px;border-radius:10px;font-weight:700;display:flex;align-items:center}
+.badge.ok{background:var(--okbg);color:var(--ok)}.badge.bad{background:var(--badbg);color:var(--bad)}
+.controls{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center}
+.controls label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:2px}
+.controls input[type=range]{width:130px}
+.controls output{color:var(--ink);font-weight:600}
+canvas{width:100%;display:block}
+#graph{height:430px}#chart{height:260px}
+table.grid{border-collapse:collapse;width:100%;table-layout:fixed}
+.grid th{font-size:12px;color:var(--mut);font-weight:600;padding:4px}
+.grid td{border:1px solid var(--line);vertical-align:top;height:74px;padding:3px;border-radius:6px}
+.grid td.clash{border:2px solid var(--bad);background:var(--badbg)}
+.chip{display:block;font-size:11.5px;border-radius:5px;padding:1px 5px;margin-bottom:2px;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.bad{outline:2px solid var(--bad)}
+.chip.mine{box-shadow:0 0 0 2px var(--ink)}
+.genes{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
+.gene{border-radius:7px;padding:3px 0;text-align:center;color:#111;font-size:12px;line-height:1.25}
+.gene b{display:block;font-size:15px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:11.5px;color:var(--mut)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;vertical-align:-1px}
+.bars .b{display:grid;grid-template-columns:170px 1fr 60px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.bars .track{background:var(--bg);border-radius:6px;height:16px;overflow:hidden}
+.bars .fill{height:100%;background:var(--acc);border-radius:6px}
+.bars .b.live .fill{background:var(--ok)}
+.bars .b.rs .fill{background:#8b94a5}
+.stu li{margin:2px 0}
+.stu .w{color:var(--bad);font-weight:600}.stu .a{color:var(--warn);font-weight:600}
+select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+.note{color:var(--mut);font-size:12px}
+.explain{display:none;margin:0 0 10px;padding:8px 10px;border-radius:8px;background:var(--accbg);color:var(--ink);font-size:13px;line-height:1.4}
+body.explaining .explain{display:flex;gap:8px;align-items:flex-start}
+.explain .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+#btnExplain{margin-left:0}
+body.explaining #btnExplain{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html" style="border:1px solid var(--line);padding:4px 10px;border-radius:8px;color:var(--ink);text-decoration:none">← Overview</a>
+  <h1>Exam Timetable GA Lab</h1>
+  <span class="tag">SYNTHETIC data</span>
+  <span>20 exams · 150 students · 15 slots (5 days × 3 periods) · 4 rooms · the GA below runs live in your browser</span>
+  <a href="results.html" style="margin-left:auto;border:1px solid var(--line);padding:6px 12px;border-radius:8px;color:var(--ink);text-decoration:none">Exam schedule result →</a>
+  <button id="btnExplain" title="Show what every panel on this page displays">ⓘ Explain this page</button>
+</header>
+
+<div class="app">
+  <aside class="card tour" id="tour"></aside>
+
+  <main class="right">
+    <section class="card" id="card-metrics">
+      <h2>Live status of the timetable on screen</h2>
+      <div class="metrics" id="metrics"></div>
+    </section>
+
+    <section class="card" id="card-controls">
+      <h2>Genetic algorithm controls</h2>
+      <div class="controls">
+        <button class="pri" id="btnRun">▶ Run</button>
+        <button id="btnStep">Step 1 generation</button>
+        <button id="btnReset">↻ New random start</button>
+        <label>Population <input type="range" id="cPop" min="20" max="120" step="10" value="60"><output id="oPop"></output></label>
+        <label>Mutation per gene <input type="range" id="cMut" min="0.01" max="0.15" step="0.01" value="0.05"><output id="oMut"></output></label>
+        <label>Crossover prob. <input type="range" id="cCx" min="0.5" max="1" step="0.05" value="0.8"><output id="oCx"></output></label>
+        <label>Elites <input type="range" id="cEl" min="0" max="4" step="1" value="2"><output id="oEl"></output></label>
+        <label>Speed (gens/s) <input type="range" id="cSp" min="1" max="60" step="1" value="12"><output id="oSp"></output></label>
+        <label>Stop at generation <input type="range" id="cGen" min="50" max="400" step="10" value="150"><output id="oGen"></output></label>
+        <label>Seed <input type="number" id="cSeed" value="7" style="width:70px"></label>
+      </div>
+    </section>
+
+    <div class="row r2">
+      <section class="card" id="card-graph">
+        <h2>Exam conflict graph</h2>
+        <canvas id="graph"></canvas>
+        <div class="legend" id="legendSlots"></div>
+        <p class="note">Each dot is an exam, coloured by its slot. A line means students take both exams (thicker = more students).
+          <b style="color:var(--bad)">Red lines</b> = two linked exams placed in the same slot = a clash.</p>
+      </section>
+      <section class="card" id="card-grid">
+        <h2>Timetable (best schedule so far)</h2>
+        <table class="grid" id="grid"></table>
+        <p class="note">Chip = exam, students, room. Cells with a red border contain a student clash.</p>
+      </section>
+    </div>
+
+    <section class="card" id="card-genes">
+      <h2>The chromosome: gene <i>i</i> = slot number (1–15) of exam <i>i</i></h2>
+      <div class="genes" id="genes"></div>
+    </section>
+
+    <div class="row r2">
+      <section class="card" id="card-chart">
+        <h2>Convergence (penalty, log scale)</h2>
+        <canvas id="chart"></canvas>
+      </section>
+      <section class="card" id="card-student">
+        <h2>Zoom in on one student</h2>
+        <label>Student <select id="selStu"></select></label>
+        <div class="stu" id="stuInfo"></div>
+      </section>
+    </div>
+
+    <section class="card" id="card-compare">
+      <h2>How does it compare? (final penalty, lower is better, log scale)</h2>
+      <div class="bars" id="bars"></div>
+      <p class="note">Grey/blue bars: measured in Python, mean of 10 seeds, about 9,000 evaluations each (see outputs/extended).
+        Green bar: your current browser run. Browser and Python use different random generators, so single runs differ.</p>
+    </section>
+  </main>
+</div>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+/* ---------- problem definition (from Python export) ---------- */
+const N = DATA.nExams, S = DATA.nSlots, P = DATA.nPeriods, D = DATA.nDays;
+const CAPS = DATA.roomCaps, SIZES = DATA.sizes, STU = DATA.students, W = DATA.weights;
+const C = Array.from({length: N}, () => new Array(N).fill(0));
+for (const ex of STU) for (let a = 0; a < ex.length; a++) for (let b = a + 1; b < ex.length; b++) {
+  C[ex[a]][ex[b]]++; C[ex[b]][ex[a]]++;
+}
+const en = e => "E" + String(e + 1).padStart(2, "0");
+const hue = s => `hsl(${Math.round(s * 360 / S)} 68% 68%)`;
+const $ = id => document.getElementById(id);
+
+/* ---------- rooms, fitness (same definitions as the Python project) ---------- */
+function allocate(ch) {
+  const rooms = new Array(N).fill(-1); let fails = 0;
+  for (let s = 0; s < S; s++) {
+    const ex = []; for (let e = 0; e < N; e++) if (ch[e] === s) ex.push(e);
+    ex.sort((a, b) => SIZES[b] - SIZES[a]);
+    const free = CAPS.map((_, i) => i);
+    for (const e of ex) {
+      const k = free.findIndex(r => CAPS[r] >= SIZES[e]);
+      if (k < 0) fails++; else { rooms[e] = free[k]; free.splice(k, 1); }
+    }
+  }
+  return {rooms, fails};
+}
+function evaluate(ch) {
+  let clashes = 0, consec = 0;
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+    const c = C[i][j]; if (!c) continue;
+    if (ch[i] === ch[j]) clashes += c;
+    else if (Math.floor(ch[i] / P) === Math.floor(ch[j] / P) && Math.abs(ch[i] % P - ch[j] % P) === 1) consec += c;
+  }
+  let load = 0;
+  for (const ex of STU) {
+    const cnt = new Array(D).fill(0);
+    for (const e of ex) cnt[Math.floor(ch[e] / P)]++;
+    for (const c of cnt) load += Math.max(0, c - 1);
+  }
+  const rf = allocate(ch).fails;
+  return {clashes, rf, consec, load, hard: clashes + rf,
+          total: W.clash * clashes + W.room * rf + W.consec * consec + W.load * load};
+}
+
+/* ---------- GA ---------- */
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let G = null;   // GA state
+const cfg = () => ({pm: +$("cMut").value, pc: +$("cCx").value, el: +$("cEl").value,
+                    pop: +$("cPop").value, sp: +$("cSp").value, maxGen: +$("cGen").value});
+function initGA() {
+  const c = cfg(), rng = mulberry32(+$("cSeed").value || 1);
+  const pop = Array.from({length: c.pop}, () => Array.from({length: N}, () => Math.floor(rng() * S)));
+  const fit = pop.map(x => evaluate(x).total);
+  const bi = fit.indexOf(Math.min(...fit));
+  G = {rng, pop, fit, gen: 0, bestC: pop[bi].slice(), bestF: fit[bi], hb: [fit[bi]],
+       hm: [fit.reduce((a, b) => a + b, 0) / fit.length], firstValid: null, first: pop[0].slice()};
+  if (evaluate(G.bestC).hard === 0) G.firstValid = 0;
+}
+function tournament() {
+  let best = -1;
+  for (let k = 0; k < 3; k++) { const i = Math.floor(G.rng() * G.pop.length); if (best < 0 || G.fit[i] < G.fit[best]) best = i; }
+  return G.pop[best];
+}
+function stepGen() {
+  const c = cfg(), n = G.pop.length;
+  const order = G.fit.map((f, i) => i).sort((a, b) => G.fit[a] - G.fit[b]);
+  const np = [], nf = [];
+  for (let k = 0; k < Math.min(c.el, n); k++) { np.push(G.pop[order[k]].slice()); nf.push(G.fit[order[k]]); }
+  while (np.length < n) {
+    const p1 = tournament(), p2 = tournament();
+    let c1 = p1.slice(), c2 = p2.slice();
+    if (G.rng() < c.pc) {
+      const cut = 1 + Math.floor(G.rng() * (N - 1));
+      c1 = p1.slice(0, cut).concat(p2.slice(cut)); c2 = p2.slice(0, cut).concat(p1.slice(cut));
+    }
+    for (const ch of [c1, c2]) {
+      for (let g = 0; g < N; g++) if (G.rng() < c.pm) ch[g] = Math.floor(G.rng() * S);
+      np.push(ch); nf.push(evaluate(ch).total);
+    }
+  }
+  G.pop = np.slice(0, n); G.fit = nf.slice(0, n); G.gen++;
+  const m = Math.min(...G.fit);
+  if (m < G.bestF) { G.bestF = m; G.bestC = G.pop[G.fit.indexOf(m)].slice(); }
+  G.hb.push(G.bestF); G.hm.push(G.fit.reduce((a, b) => a + b, 0) / G.fit.length);
+  if (G.firstValid === null && evaluate(G.bestC).hard === 0) G.firstValid = G.gen;
+}
+
+/* ---------- drawing ---------- */
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function setupCanvas(cv) {
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d);
+  const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0);
+  return {ctx, w: r.width, h: r.height};
+}
+let shown = null, shownEval = null, selStudent = 0;
+function drawGraph() {
+  const {ctx, w, h} = setupCanvas($("graph"));
+  ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 32;
+  const pos = Array.from({length: N}, (_, i) => {
+    const a = -Math.PI / 2 + 2 * Math.PI * i / N; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+  const clashes = [];
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+    const c = C[i][j]; if (!c) continue;
+    if (shown[i] === shown[j]) { clashes.push([i, j, c]); continue; }
+    ctx.strokeStyle = css("--acc"); ctx.globalAlpha = Math.min(0.5, 0.04 + c * 0.03); ctx.lineWidth = 0.6 + c * 0.12;
+    ctx.beginPath(); ctx.moveTo(...pos[i]); ctx.lineTo(...pos[j]); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  for (const [i, j, c] of clashes) {
+    ctx.strokeStyle = css("--bad"); ctx.lineWidth = 2.5 + c * 0.25;
+    ctx.beginPath(); ctx.moveTo(...pos[i]); ctx.lineTo(...pos[j]); ctx.stroke();
+  }
+  const mine = new Set(STU[selStudent]);
+  ctx.font = "600 11px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let i = 0; i < N; i++) {
+    const rad = 7 + SIZES[i] / 5;
+    ctx.beginPath(); ctx.arc(pos[i][0], pos[i][1], rad, 0, 7);
+    ctx.fillStyle = hue(shown[i]); ctx.fill();
+    ctx.lineWidth = mine.has(i) ? 3.5 : 1; ctx.strokeStyle = mine.has(i) ? css("--ink") : "rgba(0,0,0,.35)"; ctx.stroke();
+    ctx.fillStyle = "#111"; ctx.fillText(String(i + 1), pos[i][0], pos[i][1] + 0.5);
+  }
+}
+function drawGrid() {
+  const {rooms} = allocate(shown);
+  const bad = new Set();
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) if (C[i][j] && shown[i] === shown[j]) { bad.add(i); bad.add(j); }
+  const mine = new Set(STU[selStudent]);
+  let html = "<tr><th></th>" + Array.from({length: P}, (_, p) => `<th>Period ${p + 1}</th>`).join("") + "</tr>";
+  for (let d = 0; d < D; d++) {
+    html += `<tr><th>Day ${d + 1}</th>`;
+    for (let p = 0; p < P; p++) {
+      const s = d * P + p, ex = [];
+      for (let e = 0; e < N; e++) if (shown[e] === s) ex.push(e);
+      const clash = ex.some(e => bad.has(e));
+      html += `<td class="${clash ? "clash" : ""}">` + ex.map(e =>
+        `<span class="chip ${bad.has(e) ? "bad" : ""} ${mine.has(e) ? "mine" : ""}" style="background:${hue(s)}">` +
+        `${en(e)} · ${SIZES[e]} · ${rooms[e] >= 0 ? "R" + CAPS[rooms[e]] : "NO ROOM"}</span>`).join("") + "</td>";
+    }
+    html += "</tr>";
+  }
+  $("grid").innerHTML = html;
+}
+function drawGenes() {
+  $("genes").innerHTML = shown.map((s, e) =>
+    `<div class="gene" style="background:${hue(s)}">${en(e)}<b>${s + 1}</b></div>`).join("");
+}
+function drawChart() {
+  const {ctx, w, h} = setupCanvas($("chart")); ctx.clearRect(0, 0, w, h);
+  const L = 48, Rr = 10, T = 10, B = 30, pw = w - L - Rr, ph = h - T - B;
+  const all = G.hb.concat(G.hm), lo = Math.log10(Math.max(1, Math.min(...all))), hi = Math.log10(Math.max(...all));
+  const y0 = Math.floor(lo), y1 = Math.max(y0 + 1, Math.ceil(hi)), mg = cfg().maxGen;
+  const X = g => L + pw * g / mg, Y = v => T + ph * (1 - (Math.log10(Math.max(1, v)) - y0) / (y1 - y0));
+  ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--mut"); ctx.font = "11px system-ui"; ctx.lineWidth = 1;
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let k = y0; k <= y1; k++) { const y = Y(Math.pow(10, k)); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - Rr, y); ctx.stroke();
+    ctx.fillText("10^" + k, L - 6, y); }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (let g = 0; g <= mg; g += mg >= 200 ? 100 : 50) ctx.fillText(g, X(g), h - B + 6);
+  ctx.fillText("generation", L + pw / 2, h - 14);
+  const line = (arr, col, dash) => { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash(dash); ctx.beginPath();
+    arr.forEach((v, g) => g ? ctx.lineTo(X(g), Y(v)) : ctx.moveTo(X(g), Y(v))); ctx.stroke(); ctx.setLineDash([]); };
+  line(G.hm, css("--warn"), [5, 4]); line(G.hb, css("--acc"), []);
+  if (G.firstValid !== null) {
+    ctx.strokeStyle = css("--ok"); ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(G.firstValid), T); ctx.lineTo(X(G.firstValid), T + ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = css("--ok"); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("first valid timetable: gen " + G.firstValid, X(G.firstValid) + 4, T + 2);
+  }
+  ctx.textAlign = "right"; ctx.fillStyle = css("--acc"); ctx.fillText("best so far", w - Rr - 4, T + 18);
+  ctx.fillStyle = css("--warn"); ctx.fillText("population mean", w - Rr - 4, T + 32);
+}
+function drawMetrics() {
+  const e = shownEval;
+  $("metrics").innerHTML =
+    `<div class="tile"><b>${G.gen}</b><small>generation</small></div>` +
+    `<div class="tile"><b>${e.total.toLocaleString()}</b><small>penalty (lower = better)</small></div>` +
+    `<div class="badge ${e.hard ? "bad" : "ok"}">${e.hard ? "INVALID: " + e.hard + " hard violation" + (e.hard > 1 ? "s" : "") : "VALID: 0 hard violations"}</div>` +
+    `<div class="tile"><b>${e.clashes}</b><small>student clashes ×${W.clash}</small></div>` +
+    `<div class="tile"><b>${e.rf}</b><small>room failures ×${W.room}</small></div>` +
+    `<div class="tile"><b>${e.consec}</b><small>back-to-back ×${W.consec}</small></div>` +
+    `<div class="tile"><b>${e.load}</b><small>same-day load ×${W.load}</small></div>` +
+    `<div class="tile"><b>${DATA.pythonSeed7}</b><small>Python result, seed 7</small></div>`;
+}
+function drawStudent() {
+  const ex = STU[selStudent].slice().sort((a, b) => shown[a] - shown[b]), {rooms} = allocate(shown);
+  let html = `<p class="note">This student takes ${ex.length} exams.</p><ul>`;
+  ex.forEach((e, k) => {
+    const s = shown[e], same = ex.some(o => o !== e && shown[o] === s);
+    const near = !same && ex.some(o => o !== e && Math.floor(shown[o] / P) === Math.floor(s / P) && Math.abs(shown[o] % P - s % P) === 1);
+    html += `<li>${en(e)} · Day ${Math.floor(s / P) + 1}, Period ${s % P + 1} · ${rooms[e] >= 0 ? "R" + CAPS[rooms[e]] : "no room"}` +
+      (same ? ` <span class="w">two exams at the same time!</span>` : near ? ` <span class="a">back-to-back</span>` : "") + `</li>`;
+  });
+  $("stuInfo").innerHTML = html + "</ul>";
+}
+function drawBars() {
+  const items = Object.entries(DATA.ref).map(([k, v]) => [k, v, k === "Random search" ? "rs" : ""]);
+  items.push(["This browser run", G.bestF, "live"]);
+  const pct = v => Math.max(4, Math.min(100, (Math.log10(Math.max(1, v)) - 2) / 2 * 100));
+  $("bars").innerHTML = items.sort((a, b) => b[1] - a[1]).map(([k, v, c]) =>
+    `<div class="b ${c}"><span>${k}</span><div class="track"><div class="fill" style="width:${pct(v)}%"></div></div><b>${Math.round(v)}</b></div>`).join("");
+}
+function render() {
+  shown = G.gen === 0 ? G.first : G.bestC;
+  shownEval = evaluate(shown);
+  drawMetrics(); drawGraph(); drawGrid(); drawGenes(); drawChart(); drawStudent(); drawBars(); updateTourLive();
+  const c = cfg();
+  $("oPop").textContent = c.pop; $("oMut").textContent = c.pm; $("oCx").textContent = c.pc;
+  $("oEl").textContent = c.el; $("oSp").textContent = c.sp; $("oGen").textContent = c.maxGen;
+}
+
+/* ---------- run loop ---------- */
+let running = false, acc = 0, last = 0;
+function setRunning(v) { running = v; $("btnRun").textContent = v ? "⏸ Pause" : "▶ Run"; last = performance.now(); }
+function frame(t) {
+  const dt = Math.min(0.1, (t - last) / 1000); last = t;
+  if (running) {
+    acc += dt * cfg().sp;
+    while (acc >= 1 && G.gen < cfg().maxGen) { stepGen(); acc -= 1; }
+    if (G.gen >= cfg().maxGen) setRunning(false);
+    render();
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- guided tour ---------- */
+const spots = {metrics: "card-metrics", controls: "card-controls", graph: "card-graph", grid: "card-grid",
+               genes: "card-genes", chart: "card-chart", student: "card-student", compare: "card-compare"};
+const steps = [
+  {title: "1 · The problem", spot: ["graph"], body: () => `
+    <p>A university must give each of <b>20 exams</b> one of <b>15 time slots</b> and one of <b>4 rooms</b>.</p>
+    <p>Hard rules: no student sits two exams at once, every room is big enough, no room is double-booked.
+       Soft wish: avoid back-to-back exams and several exams on the same day.</p>
+    <p>There are 15<sup>20</sup> ≈ 3×10<sup>23</sup> possible timetables, far too many to try. That is why we use a <b>genetic algorithm</b>.</p>
+    <p>On the right, the graph shows which exams share students.</p>`},
+  {title: "2 · What a bad timetable looks like", spot: ["graph", "grid", "student"], body: () => `
+    <p>This is a <b>random</b> timetable. The <b style="color:var(--bad)">red lines</b> are clashes: two exams that share students were put in the same slot.</p>
+    <p>Pick a student in "Zoom in on one student" and look for "two exams at the same time!".</p>
+    <p>Right now: <b>${shownEval.clashes}</b> student clashes.</p>
+    <p><button id="tNew">Show another random timetable</button></p>`},
+  {title: "3 · How the computer stores a timetable", spot: ["genes"], body: () => `
+    <p>A timetable is a <b>chromosome</b>: a list of 20 numbers. Gene <i>i</i> is the slot of exam <i>i</i>.</p>
+    <p>Rooms are not stored; a deterministic allocator gives each exam the smallest free room that fits.</p>
+    <p>Because every exam always has exactly one slot, the "every exam scheduled once" rule can never be broken.</p>`},
+  {title: "4 · Scoring a timetable (fitness)", spot: ["metrics"], body: () => `
+    <p>The GA needs a number to decide which timetable is better. We use a <b>penalty</b>, lower is better:</p>
+    <div class="formula">${W.clash}×clashes + ${W.room}×room failures<br>+ ${W.consec}×back-to-back + ${W.load}×load<br>
+      = ${W.clash}×${shownEval.clashes} + ${W.room}×${shownEval.rf} + ${W.consec}×${shownEval.consec} + ${W.load}×${shownEval.load}<br>= <b>${shownEval.total.toLocaleString()}</b></div>
+    <p>The big weights on hard rules mean the GA fixes clashes first and polishes comfort afterwards.</p>`},
+  {title: "5 · Evolving better timetables", spot: ["controls", "chart"], body: () => `
+    <p>Start with ${cfg().pop} random timetables. Repeat each generation:</p>
+    <ol style="padding-left:18px;margin:6px 0">
+      <li><b>Select</b> parents by tournament of 3 (best of 3 random picks)</li>
+      <li><b>Cross over</b> two parents at a random cut point (prob ${cfg().pc})</li>
+      <li><b>Mutate</b> each gene with prob ${cfg().pm}</li>
+      <li><b>Elitism</b>: keep the best ${cfg().el} unchanged</li>
+    </ol>
+    <p>Try changing the sliders while it runs, e.g. mutation 0.15 or elites 0.</p>
+    <p><button class="pri" id="tRun">Run the GA</button></p>`},
+  {title: "6 · Result and honest comparison", spot: ["metrics", "grid", "compare"], body: () => `
+    <p>Generation <b>${G.gen}</b>: penalty <b>${shownEval.total.toLocaleString()}</b>, ${shownEval.hard ? "still invalid" : "<b style=\"color:var(--ok)\">valid timetable</b>"}.
+       ${G.firstValid !== null ? `First valid at generation ${G.firstValid}.` : ""}</p>
+    <p>The GA beats random search by a huge margin. A simple greedy heuristic is competitive, and seeding the GA with it did best at this budget.
+       With 4× more evaluations, simulated annealing overtakes the GA. So: the GA works well, but it is not magic.</p>
+    <p class="note">Python results are 10-seed means measured in the main project.</p>
+    <p><button class="pri" id="tFull">Run from a fresh start to the end</button></p>`},
+];
+let tourIdx = 0;
+/* ---------- "Explain this page": one numbered note per panel ---------- */
+const EXPLAIN = {
+  tour: "Guided tour: six steps from the problem to the result. Each step outlines the panel it talks about and updates its numbers live.",
+  "card-metrics": "Status of the timetable on screen: generation, penalty, a VALID / INVALID badge for the hard rules, the four penalty terms with their weights, and the Python seed-7 result (600) for comparison.",
+  "card-controls": "Run, pause or step the genetic algorithm and restart from a new random population. The sliders change population, mutation, crossover, elites, speed and stopping generation; most take effect while it runs.",
+  "card-graph": "Exam conflict graph: each dot is an exam (bigger = more students), coloured by its slot. A line means students take both exams; red lines are clashes (linked exams in the same slot).",
+  "card-grid": "The timetable of the best schedule so far: days down, periods across. Each chip shows exam, number of students and room. A red cell contains a student clash.",
+  "card-genes": "The chromosome: 20 genes, one per exam, each holding that exam's slot number (1 to 15). Colours match the graph and the grid.",
+  "card-chart": "Convergence on a log scale: best-so-far penalty (blue, never rises) and population mean (orange). A green dashed line marks the first generation with a valid timetable.",
+  "card-student": "Pick one student to see their own exams, days, periods and rooms, with warnings for two exams at the same time or back-to-back exams. Their exams are outlined in the graph and grid.",
+  "card-compare": "Mean final penalties of the methods measured in Python (10 seeds, about 9,000 evaluations each) next to the best penalty of your current browser run (green)."
+};
+const EXPLAIN_N = {tour: 1, "card-metrics": 2, "card-controls": 3, "card-graph": 4, "card-grid": 5, "card-genes": 6,
+                   "card-chart": 7, "card-student": 8, "card-compare": 9};
+const explainHtml = k => `<div class="explain"><span class="n">${EXPLAIN_N[k]}</span><span>${EXPLAIN[k]}</span></div>`;
+function drawTour() {
+  const s = steps[tourIdx];
+  $("tour").innerHTML = explainHtml("tour") + `<h2>Guided tour</h2><div class="dots">` + steps.map((_, i) =>
+    `<div class="dot ${i <= tourIdx ? "on" : ""}" data-i="${i}"></div>`).join("") + `</div>
+    <h3>${s.title}</h3><div id="tourBody">${s.body()}</div>
+    <div class="nav"><button id="tPrev" ${tourIdx === 0 ? "disabled" : ""}>← Back</button>
+    <button class="pri" id="tNext" ${tourIdx === steps.length - 1 ? "disabled" : ""}>Next →</button></div>`;
+  for (const k in spots) $(spots[k]).classList.toggle("spot", s.spot.includes(k));
+  $("tPrev").onclick = () => { tourIdx--; drawTour(); };
+  $("tNext").onclick = () => { tourIdx++; drawTour(); };
+  document.querySelectorAll(".dot").forEach(d => d.onclick = () => { tourIdx = +d.dataset.i; drawTour(); });
+  if ($("tNew")) $("tNew").onclick = () => { $("cSeed").value = Math.floor(Math.random() * 9000) + 1; resetGA(); };
+  if ($("tRun")) $("tRun").onclick = () => setRunning(!running);
+  if ($("tFull")) $("tFull").onclick = () => { resetGA(); setRunning(true); };
+}
+function updateTourLive() {  // refresh only the dynamic text of the current step
+  if (!$("tourBody")) return;
+  const html = steps[tourIdx].body();
+  if ($("tourBody").dataset.h === html) return;      // avoid replacing buttons mid-click
+  $("tourBody").dataset.h = html;
+  $("tourBody").innerHTML = html;
+  if ($("tNew")) $("tNew").onclick = () => { $("cSeed").value = Math.floor(Math.random() * 9000) + 1; resetGA(); };
+  if ($("tRun")) $("tRun").onclick = () => setRunning(!running);
+  if ($("tFull")) $("tFull").onclick = () => { resetGA(); setRunning(true); };
+}
+
+/* ---------- wiring ---------- */
+function resetGA() { setRunning(false); acc = 0; initGA(); render(); }
+function init() {
+  $("legendSlots").innerHTML = Array.from({length: S}, (_, s) =>
+    `<span><i style="background:${hue(s)}"></i>D${Math.floor(s / P) + 1}P${s % P + 1}</span>`).join("");
+  $("selStu").innerHTML = STU.map((_, i) => `<option value="${i}">Student ${i + 1}</option>`).join("");
+  $("selStu").onchange = e => { selStudent = +e.target.value; render(); };
+  $("btnRun").onclick = () => { if (G.gen >= cfg().maxGen) resetGA(); setRunning(!running); };
+  $("btnStep").onclick = () => { setRunning(false); stepGen(); render(); };
+  $("btnReset").onclick = () => { $("cSeed").value = Math.floor(Math.random() * 9000) + 1; resetGA(); };
+  $("cPop").onchange = resetGA; $("cSeed").onchange = resetGA;
+  for (const id of ["cMut", "cCx", "cEl", "cSp", "cGen"]) $(id).oninput = render;
+  window.addEventListener("resize", render);
+  for (const k of Object.keys(EXPLAIN)) if (k !== "tour") $(k).insertAdjacentHTML("afterbegin", explainHtml(k));
+  $("btnExplain").onclick = () => { document.body.classList.toggle("explaining"); render(); };
+  initGA(); drawTour(); render();
+  last = performance.now(); requestAnimationFrame(frame);
+}
+init();
+</script>
+</body>
+</html>
